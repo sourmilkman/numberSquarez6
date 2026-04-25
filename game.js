@@ -5,10 +5,10 @@
   const $ = id => document.getElementById(id);
   const screens = { menu: $('menu-screen'), setup: $('setup-screen'), game: $('game-screen') };
   const MODES = {
-    antimagic: {
-      name: 'Anti-Magic Squares',
-      badge: 'Unique Sums',
-      subtitle: 'Make every line sum unique and sequential.'
+    shikaku: {
+      name: 'Shikaku',
+      badge: 'Rectangles',
+      subtitle: 'Divide the grid into clue-sized rectangles.'
     },
     alphamagic: {
       name: 'Alphanametics',
@@ -21,6 +21,39 @@
     easy: [[7,13,1,9],[3,11,15,6],[16,8,4,10],[5,2,12,14]],
     medium: [[9,23,13,20,3],[16,12,5,21,15],[10,2,11,17,22],[25,19,14,8,1],[6,7,18,4,24]],
     hard: [[4,36,13,15,18,21],[27,32,6,23,20,2],[19,12,5,22,25,34],[33,11,35,29,3,1],[26,7,30,10,14,24],[9,8,16,17,28,31]]
+  };
+  const SHIKAKU_PUZZLES = {
+    easy: {
+      size: 5,
+      rects: [
+        { r:0, c:0, h:2, w:2, clue:[0,0] }, { r:0, c:2, h:1, w:3, clue:[0,3] },
+        { r:1, c:2, h:2, w:3, clue:[2,4] }, { r:2, c:0, h:1, w:2, clue:[2,0] },
+        { r:3, c:0, h:2, w:3, clue:[4,1] }, { r:3, c:3, h:2, w:2, clue:[3,3] }
+      ]
+    },
+    medium: {
+      size: 6,
+      rects: [
+        { r:0, c:0, h:3, w:1, clue:[1,0] }, { r:0, c:1, h:2, w:2, clue:[0,2] },
+        { r:0, c:3, h:1, w:3, clue:[0,4] }, { r:1, c:3, h:3, w:1, clue:[2,3] },
+        { r:1, c:4, h:2, w:2, clue:[1,5] }, { r:2, c:1, h:1, w:2, clue:[2,2] },
+        { r:3, c:0, h:1, w:3, clue:[3,1] },
+        { r:4, c:0, h:2, w:2, clue:[5,0] }, { r:4, c:2, h:2, w:2, clue:[4,3] },
+        { r:3, c:4, h:3, w:2, clue:[4,5] }
+      ]
+    },
+    hard: {
+      size: 7,
+      rects: [
+        { r:0, c:0, h:2, w:3, clue:[0,1] }, { r:0, c:3, h:3, w:1, clue:[1,3] },
+        { r:0, c:4, h:1, w:3, clue:[0,5] }, { r:1, c:4, h:2, w:2, clue:[2,5] },
+        { r:1, c:6, h:3, w:1, clue:[3,6] }, { r:2, c:0, h:3, w:1, clue:[3,0] },
+        { r:2, c:1, h:2, w:2, clue:[2,2] }, { r:3, c:3, h:2, w:3, clue:[4,4] },
+        { r:4, c:1, h:3, w:2, clue:[5,1] }, { r:5, c:0, h:2, w:1, clue:[5,0] },
+        { r:5, c:3, h:2, w:2, clue:[6,4] }, { r:5, c:5, h:2, w:2, clue:[5,6] },
+        { r:4, c:6, h:1, w:1, clue:[4,6] }
+      ]
+    }
   };
   const ALPHA_PUZZLES = [
     { difficulty:'easy', title:'Small Run', solution:[[8,25,12],[19,15,11],[18,5,22]], numberMagicSum:45, wordLengthMagicSum:21 },
@@ -35,12 +68,13 @@
   ];
   const LINES_3 = [[0,0,0,1,0,2,'R1'],[1,0,1,1,1,2,'R2'],[2,0,2,1,2,2,'R3'],[0,0,1,0,2,0,'C1'],[0,1,1,1,2,1,'C2'],[0,2,1,2,2,2,'C3'],[0,0,1,1,2,2,'D1'],[0,2,1,1,2,0,'D2']];
 
-  let gameMode = 'antimagic';
+  let gameMode = 'shikaku';
   let difficulty = 'medium';
   let gridSize = 5;
   let solution = [], puzzle = [], playerGrid = [];
   let currentAlphaPuzzle = null;
   let alphaTrayOrder = [];
+  let shikakuClues = [], shikakuRects = [], shikakuClaims = [], shikakuPreview = null;
   let selectedCell = null, selectedTray = null;
   let moveHistory = [];
   let timerStart = 0, timerRAF = 0, moveCount = 0, hintsUsed = 0, checksUsed = 0, gameSerial = 0;
@@ -102,7 +136,7 @@
   }
   function getBasePoints() {
     const diffMult = { easy: 1, medium: 1.8, hard: 3 };
-    const modeMult = gameMode === 'antimagic' ? gridSize * .55 : 2.2;
+    const modeMult = gameMode === 'shikaku' ? gridSize * .5 : 2.2;
     return Math.round(520 * diffMult[difficulty] * modeMult);
   }
   function calculateScore() {
@@ -132,7 +166,7 @@
   function stopTimer() { gameSerial++; if (timerRAF) cancelAnimationFrame(timerRAF); timerRAF = 0; }
 
   function updateMenuScores() {
-    ['antimagic', 'alphamagic'].forEach(mode => {
+    ['shikaku', 'alphamagic'].forEach(mode => {
       const stats = getModeStats(mode);
       $(`menu-${mode}-best`).textContent = stats.overallBest ? stats.overallBest.toLocaleString() : '-';
       $(`menu-${mode}-wins`).textContent = stats.totalWins || 0;
@@ -172,6 +206,131 @@
     puzzle = Array.from({ length: n }, () => Array(n).fill(0));
     cells.forEach(i => { const r = Math.floor(i / n), c = i % n; puzzle[r][c] = solution[r][c]; });
     playerGrid = cloneGrid(puzzle);
+  }
+  function generateShikaku(diff) {
+    const data = SHIKAKU_PUZZLES[diff];
+    gridSize = data.size;
+    shikakuRects = data.rects.map((rect, id) => ({ ...rect, id, area: rect.h * rect.w }));
+    shikakuClues = shikakuRects.map(rect => ({ id: rect.id, r: rect.clue[0], c: rect.clue[1], area: rect.area }));
+    shikakuClaims = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
+    solution = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+    puzzle = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+    playerGrid = Array.from({ length: gridSize }, () => Array(gridSize).fill(0));
+    shikakuClues.forEach(clue => { solution[clue.r][clue.c] = clue.area; puzzle[clue.r][clue.c] = clue.area; playerGrid[clue.r][clue.c] = clue.area; });
+    selectedCell = { r: shikakuClues[0].r, c: shikakuClues[0].c };
+    shikakuPreview = null;
+  }
+  function getShikakuClueAt(r, c) { return shikakuClues.find(clue => clue.r === r && clue.c === c); }
+  function getSelectedShikakuClue() { return selectedCell ? getShikakuClueAt(selectedCell.r, selectedCell.c) : null; }
+  function getShikakuFactors(area) {
+    const factors = [];
+    for (let h = 1; h <= area; h++) if (area % h === 0) factors.push({ h, w: area / h });
+    return factors.filter(f => f.h <= gridSize && f.w <= gridSize);
+  }
+  function shikakuRectCells(rect) {
+    const cells = [];
+    for (let r = rect.r; r < rect.r + rect.h; r++) for (let c = rect.c; c < rect.c + rect.w; c++) cells.push([r, c]);
+    return cells;
+  }
+  function canPlaceShikakuRect(clue, rect) {
+    if (rect.r < 0 || rect.c < 0 || rect.r + rect.h > gridSize || rect.c + rect.w > gridSize) return false;
+    if (clue.r < rect.r || clue.r >= rect.r + rect.h || clue.c < rect.c || clue.c >= rect.c + rect.w) return false;
+    const cluesInside = shikakuClues.filter(cl => cl.r >= rect.r && cl.r < rect.r + rect.h && cl.c >= rect.c && cl.c < rect.c + rect.w);
+    if (cluesInside.length !== 1 || cluesInside[0].id !== clue.id) return false;
+    return shikakuRectCells(rect).every(([r, c]) => shikakuClaims[r][c] === null || shikakuClaims[r][c] === clue.id);
+  }
+  function setShikakuPreview(h, w) {
+    const clue = getSelectedShikakuClue();
+    if (!clue) return;
+    shikakuPreview = { clueId: clue.id, h, w };
+    renderAll();
+  }
+  function placeShikakuRectAt(r, c) {
+    const clue = getSelectedShikakuClue();
+    if (!clue || !shikakuPreview || shikakuPreview.clueId !== clue.id) return;
+    const rect = { r, c, h: shikakuPreview.h, w: shikakuPreview.w };
+    if (!canPlaceShikakuRect(clue, rect)) { sfx.error(); return; }
+    moveHistory.push(shikakuClaims.map(row => row.slice()));
+    for (let rr = 0; rr < gridSize; rr++) for (let cc = 0; cc < gridSize; cc++) if (shikakuClaims[rr][cc] === clue.id) shikakuClaims[rr][cc] = null;
+    shikakuRectCells(rect).forEach(([rr, cc]) => { shikakuClaims[rr][cc] = clue.id; });
+    moveCount++;
+    renderAll();
+    sfx.place();
+    if (isShikakuComplete()) setTimeout(showWin, 240);
+  }
+  function getShikakuErrors() {
+    const cells = new Set(), states = {};
+    shikakuClues.forEach(clue => {
+      const claimed = [];
+      for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) if (shikakuClaims[r][c] === clue.id) claimed.push([r, c]);
+      if (!claimed.length) { states[clue.id] = 'incomplete'; return; }
+      const rs = claimed.map(x => x[0]), cs = claimed.map(x => x[1]);
+      const minR = Math.min(...rs), maxR = Math.max(...rs), minC = Math.min(...cs), maxC = Math.max(...cs);
+      const area = (maxR - minR + 1) * (maxC - minC + 1);
+      const rectangular = area === claimed.length;
+      const hasClue = clue.r >= minR && clue.r <= maxR && clue.c >= minC && clue.c <= maxC;
+      const ok = rectangular && hasClue && claimed.length === clue.area;
+      states[clue.id] = ok ? 'valid' : 'duplicate';
+      if (!ok) claimed.forEach(([r, c]) => cells.add(`${r},${c}`));
+    });
+    for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) if (shikakuClaims[r][c] === null) cells.add(`${r},${c}`);
+    return { cells, states };
+  }
+  function isShikakuComplete() {
+    return shikakuClaims.every(row => row.every(v => v !== null)) && Object.values(getShikakuErrors().states).every(s => s === 'valid');
+  }
+  function renderShikakuGrid() {
+    const grid = document.createElement('div');
+    grid.className = `grid size-${gridSize}`;
+    grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+    const errors = getShikakuErrors();
+    const clue = getSelectedShikakuClue();
+    for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.r = r; cell.dataset.c = c;
+      const owner = shikakuClaims[r][c];
+      if (owner !== null) cell.classList.add('shikaku-claimed');
+      if (selectedCell && selectedCell.r === r && selectedCell.c === c) cell.classList.add('selected');
+      if (errors.cells.has(`${r},${c}`) && owner !== null) cell.classList.add('error');
+      if (clue && shikakuPreview) {
+        const rect = { r, c, h: shikakuPreview.h, w: shikakuPreview.w };
+        if (canPlaceShikakuRect(clue, rect)) shikakuRectCells(rect).forEach(([rr, cc]) => {
+          if (rr === r && cc === c) cell.classList.add('shikaku-preview');
+        });
+      }
+      const thisClue = getShikakuClueAt(r, c);
+      if (thisClue) { cell.classList.add('given', 'clue'); cell.dataset.area = thisClue.area; cell.textContent = thisClue.area; }
+      const id = owner;
+      if (id !== null) {
+        cell.classList.add('shikaku-edges');
+        if (r === 0 || shikakuClaims[r - 1][c] !== id) cell.style.setProperty('--edge-t', '3px');
+        if (r === gridSize - 1 || shikakuClaims[r + 1][c] !== id) cell.style.setProperty('--edge-b', '3px');
+        if (c === 0 || shikakuClaims[r][c - 1] !== id) cell.style.setProperty('--edge-l', '3px');
+        if (c === gridSize - 1 || shikakuClaims[r][c + 1] !== id) cell.style.setProperty('--edge-r', '3px');
+      }
+      cell.addEventListener('click', () => {
+        const clickedClue = getShikakuClueAt(r, c);
+        if (clickedClue && (!shikakuPreview || clickedClue.id !== getSelectedShikakuClue()?.id)) {
+          selectedCell = { r, c }; shikakuPreview = null; renderAll(); sfx.tap(); return;
+        }
+        placeShikakuRectAt(r, c);
+      });
+      grid.appendChild(cell);
+    }
+    $('grid-container').replaceChildren(grid);
+  }
+  function renderShikakuTray() {
+    const tray = $('tray'); tray.innerHTML = '';
+    const clue = getSelectedShikakuClue();
+    if (!clue) return;
+    getShikakuFactors(clue.area).forEach(({ h, w }) => {
+      const btn = document.createElement('button');
+      btn.className = 'tray-num' + (shikakuPreview && shikakuPreview.h === h && shikakuPreview.w === w ? ' selected' : '');
+      btn.textContent = `${h}x${w}`;
+      btn.addEventListener('click', () => setShikakuPreview(h, w));
+      tray.appendChild(btn);
+    });
   }
   function renderAntiMagicGrid() {
     const grid = document.createElement('div');
@@ -425,7 +584,9 @@
   }
   function dropNumberOnCell(r, c, num, source) {
     if (puzzle[r][c]) return;
-    const allowed = gameMode === 'antimagic' ? num >= 1 && num <= gridSize * gridSize : flat(solution).includes(num);
+    const allowed = gameMode === 'shikaku'
+      ? num >= 1 && num <= gridSize
+      : gameMode === 'antimagic' ? num >= 1 && num <= gridSize * gridSize : flat(solution).includes(num);
     if (!allowed) return;
     if (source?.type === 'grid') {
       if (source.r === r && source.c === c) return;
@@ -441,7 +602,7 @@
       document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`)?.classList.add('pop-in');
       document.querySelector(`.cell[data-r="${source.r}"][data-c="${source.c}"]`)?.classList.add('pop-in');
       sfx.place();
-      if ((gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) setTimeout(showWin, 240);
+      if ((gameMode === 'shikaku' && isShikakuComplete()) || (gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) setTimeout(showWin, 240);
       return;
     }
     const old = playerGrid[r][c];
@@ -455,11 +616,28 @@
     const el = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
     if (el) el.classList.add('pop-in');
     sfx.place();
-    if ((gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) setTimeout(showWin, 240);
+    if ((gameMode === 'shikaku' && isShikakuComplete()) || (gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) setTimeout(showWin, 240);
   }
   function renderTracker() {
     const tracker = $('tracker');
     tracker.innerHTML = '';
+    if (gameMode === 'shikaku') {
+      const errors = getShikakuErrors();
+      shikakuClues.forEach(clue => {
+        const item = document.createElement('div');
+        const state = errors.states[clue.id] || 'incomplete';
+        item.className = `track-item ${state}`;
+        let count = 0;
+        for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) if (shikakuClaims[r][c] === clue.id) count++;
+        item.innerHTML = `<span class="track-label">${clue.area}</span><span class="track-value">${count}/${clue.area}</span>`;
+        tracker.appendChild(item);
+      });
+      const clue = getSelectedShikakuClue();
+      $('target-strip').innerHTML = clue
+        ? `<span class="target-pill">Selected clue <strong>${clue.area}</strong></span><span class="target-pill">Choose a rectangle size, then tap its top-left cell</span>`
+        : '<span class="target-pill">Select a clue number</span>';
+      return;
+    }
     const errors = gameMode === 'antimagic' ? getAntiMagicErrors() : getAlphamagicErrors();
     const sums = gameMode === 'antimagic' ? getAntiMagicLineSums() : alphaLineSums(playerGrid, n => n);
     const antiTargets = gameMode === 'antimagic' ? getAntiMagicTargetSums() : [];
@@ -497,11 +675,11 @@
     }).join('');
     return `<span class="target-pill">Use every number <strong>1-${gridSize * gridSize}</strong> once</span>
       <span class="target-pill">${targets.length} line sums must be <strong>${targets[0]}-${targets[targets.length - 1]}</strong></span>
-      <div class="target-note">Rows, columns and diagonals do not have assigned totals. Any line can claim any unused target sum.</div>
       <div class="sum-goals" aria-label="Anti-magic target sums">${goals}</div>`;
   }
   function renderAll() {
-    if (gameMode === 'antimagic') { renderAntiMagicGrid(); renderAntiMagicTray(); }
+    if (gameMode === 'shikaku') { renderShikakuGrid(); renderShikakuTray(); }
+    else if (gameMode === 'antimagic') { renderAntiMagicGrid(); renderAntiMagicTray(); }
     else { renderAlphamagicGrid(); renderAlphamagicTray(); }
     renderTracker();
   }
@@ -509,7 +687,8 @@
   function startGame() {
     stopTimer();
     selectedCell = null; selectedTray = null; moveHistory = []; moveCount = 0; hintsUsed = 0; checksUsed = 0;
-    if (gameMode === 'antimagic') generateAntiMagic(difficulty);
+    if (gameMode === 'shikaku') generateShikaku(difficulty);
+    else if (gameMode === 'antimagic') generateAntiMagic(difficulty);
     else loadAlphamagicPuzzle(difficulty);
     $('game-mode-label').textContent = `${MODES[gameMode].name} - ${difficulty.toUpperCase()}`;
     $('win-overlay').classList.remove('active');
@@ -519,6 +698,25 @@
     startTimer();
   }
   function hint() {
+    if (gameMode === 'shikaku') {
+      const clue = shikakuClues.find(cl => {
+        let count = 0;
+        for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) if (shikakuClaims[r][c] === cl.id) count++;
+        return count !== cl.area;
+      });
+      if (!clue) return;
+      const rect = shikakuRects[clue.id];
+      moveHistory.push(shikakuClaims.map(row => row.slice()));
+      for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) if (shikakuClaims[r][c] === clue.id) shikakuClaims[r][c] = null;
+      shikakuRectCells(rect).forEach(([r, c]) => { shikakuClaims[r][c] = clue.id; });
+      selectedCell = { r: clue.r, c: clue.c };
+      shikakuPreview = { clueId: clue.id, h: rect.h, w: rect.w };
+      hintsUsed++; moveCount++;
+      renderAll();
+      sfx.hint();
+      if (isShikakuComplete()) setTimeout(showWin, 240);
+      return;
+    }
     const empties = [];
     for (let r = 0; r < gridSize; r++) for (let c = 0; c < gridSize; c++) if (!playerGrid[r][c]) empties.push([r, c]);
     if (!empties.length) return;
@@ -532,23 +730,26 @@
   }
   function check() {
     checksUsed++;
-    const errors = gameMode === 'antimagic' ? getAntiMagicErrors() : getAlphamagicErrors();
+    const errors = gameMode === 'shikaku' ? getShikakuErrors() : gameMode === 'antimagic' ? getAntiMagicErrors() : getAlphamagicErrors();
     renderAll();
     if (errors.cells.size) {
       document.querySelectorAll('.cell.error').forEach(el => el.classList.add('shake'));
       sfx.error();
     } else sfx.tap();
-    if ((gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) showWin();
+    if ((gameMode === 'shikaku' && isShikakuComplete()) || (gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) showWin();
   }
   function undo() {
     const prev = moveHistory.pop();
     if (!prev) return;
-    playerGrid = prev; selectedCell = null; selectedTray = null; moveCount++;
+    if (gameMode === 'shikaku') shikakuClaims = prev;
+    else playerGrid = prev;
+    selectedTray = null; moveCount++;
     renderAll(); sfx.tap();
   }
   function clearGrid() {
-    moveHistory.push(cloneGrid(playerGrid));
-    playerGrid = cloneGrid(puzzle);
+    moveHistory.push(gameMode === 'shikaku' ? shikakuClaims.map(row => row.slice()) : cloneGrid(playerGrid));
+    if (gameMode === 'shikaku') shikakuClaims = Array.from({ length: gridSize }, () => Array(gridSize).fill(null));
+    else playerGrid = cloneGrid(puzzle);
     selectedCell = null; selectedTray = null; moveCount++;
     renderAll(); sfx.error();
   }
@@ -617,18 +818,19 @@
     ALPHA_PUZZLES.forEach(p => {
       if (!validateAlphamagicPuzzle(p)) console.error('[Number Squarez 6] Invalid alphamagic puzzle:', p.title, p);
     });
-    Object.entries(ANTI_SOLUTIONS).forEach(([diff, board]) => {
-      const old = { solution, puzzle, playerGrid, gridSize };
-      solution = cloneGrid(board); puzzle = cloneGrid(board); playerGrid = cloneGrid(board); gridSize = board.length;
-      if (!isAntiMagicComplete()) console.error('[Number Squarez 6] Invalid anti-magic board:', diff);
-      solution = old.solution; puzzle = old.puzzle; playerGrid = old.playerGrid; gridSize = old.gridSize;
+    Object.entries(SHIKAKU_PUZZLES).forEach(([diff, data]) => {
+      const old = { solution, puzzle, playerGrid, gridSize, shikakuClaims, shikakuClues, shikakuRects, selectedCell };
+      generateShikaku(diff);
+      data.rects.forEach((rect, id) => shikakuRectCells({ r: rect.r, c: rect.c, h: rect.h, w: rect.w }).forEach(([r, c]) => { shikakuClaims[r][c] = id; }));
+      if (!isShikakuComplete()) console.error('[Number Squarez 6] Invalid shikaku puzzle:', diff);
+      solution = old.solution; puzzle = old.puzzle; playerGrid = old.playerGrid; gridSize = old.gridSize; shikakuClaims = old.shikakuClaims; shikakuClues = old.shikakuClues; shikakuRects = old.shikakuRects; selectedCell = old.selectedCell;
     });
   }
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(err => console.warn('[SW] registration failed', err)));
   }
-  window.numberSquarez6Debug = { numberToWordsBritish, wordLength, validateAlphamagicPuzzle, loadAlphamagicPuzzle, generateAntiMagic, getAntiMagicLineSums, getAntiMagicErrors, isAntiMagicComplete, getAlphamagicErrors, isAlphamagicComplete };
+  window.numberSquarez6Debug = { numberToWordsBritish, wordLength, validateAlphamagicPuzzle, loadAlphamagicPuzzle, generateShikaku, getShikakuErrors, isShikakuComplete, getAlphamagicErrors, isAlphamagicComplete };
 
   validateAtLoad();
   applyTheme();

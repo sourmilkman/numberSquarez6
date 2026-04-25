@@ -2,7 +2,7 @@
 
 Number Squarez 6 is a dependency-free portrait PWA containing two puzzle modes:
 
-- Anti-Magic Squares: place every number once so rows, columns and diagonals have unique consecutive sums.
+- Shikaku: divide the grid into rectangles whose areas match their clue numbers.
 - Alphanametics: arrange nine numbers into a 3x3 square that is magic by numeric value and by British-English word length.
 
 ## Files

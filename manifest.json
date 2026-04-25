@@ -1,7 +1,7 @@
 {
   "name": "Number Squarez 6",
   "short_name": "NumSquarez6",
-  "description": "Anti-Magic Squares and Alphanametics puzzle games",
+  "description": "Shikaku and Alphanametics puzzle games",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

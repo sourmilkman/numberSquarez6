@@ -9,7 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#F5F2EB" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
-<meta name="description" content="Anti-Magic Squares and Alphanametics puzzle games">
+<meta name="description" content="Shikaku and Alphanametics puzzle games">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="icon192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icon512.png">
@@ -58,9 +58,17 @@
   .game-topbar-left,.game-score-display{display:flex;align-items:center;gap:8px}.btn-icon{width:36px;height:36px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .btn-icon:active,.action-btn:active,.tray-num:active{transform:scale(.94)}.live-score{font-family:"DM Mono",monospace;font-size:15px;color:var(--accent);min-width:45px;text-align:right}.timer{font-family:"DM Mono",monospace;font-size:14px;color:var(--text-muted);min-width:44px;text-align:right}
   .game-mode-label{text-align:center;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-muted);font-weight:600;flex-shrink:0;padding-bottom:4px}
-  .play-area{flex:1;overflow-y:auto;padding-bottom:8px}.grid-container{display:flex;justify-content:center;padding:6px 0 9px}.grid{display:grid;gap:2px;background:var(--border);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-md);width:min(90vw,42dvh,500px);max-width:100%}
+  .play-area{flex:1;overflow-y:auto;padding-bottom:8px}.grid-container{display:flex;justify-content:center;padding:6px 0 9px;max-width:100%;overflow:hidden}.grid{display:grid;gap:2px;background:var(--border);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-md);width:min(90vw,42dvh,500px);max-width:100%}
+  .grid.size-7{width:min(68vw,34dvh,380px)}
   .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--cell-empty);font-family:"DM Mono",monospace;font-weight:500;font-size:clamp(18px,7vw,34px);cursor:pointer;user-select:none;position:relative;transition:.14s ease}
+  .cell.shikaku-claimed{background:var(--success-light)}
+  .cell.shikaku-preview{background:var(--warn-light)}
+  .cell.shikaku-edges{box-shadow:inset var(--edge-l,0) 0 0 var(--accent),inset calc(-1 * var(--edge-r,0)) 0 0 var(--accent),inset 0 var(--edge-t,0) 0 var(--accent),inset 0 calc(-1 * var(--edge-b,0)) 0 var(--accent)}
+  .cell.shikaku-preview.shikaku-edges{box-shadow:inset 0 0 0 4px var(--warn),inset var(--edge-l,0) 0 0 var(--accent),inset calc(-1 * var(--edge-r,0)) 0 0 var(--accent),inset 0 var(--edge-t,0) 0 var(--accent),inset 0 calc(-1 * var(--edge-b,0)) 0 var(--accent)}
+  .cell.clue::after{content:attr(data-area);position:absolute;top:4px;left:5px;font-size:10px;color:var(--accent);font-family:"DM Mono",monospace}
   .grid.size-5 .cell{font-size:clamp(16px,6vw,30px)}.grid.size-6 .cell{font-size:clamp(14px,5vw,25px)}.cell.given{background:var(--cell-given);cursor:default}.cell.filled{background:var(--cell-filled)}.cell.selected{background:var(--cell-selected);color:var(--cell-selected-text);box-shadow:inset 0 0 0 3px rgba(255,255,255,.18)}.cell.error{background:var(--error-light);color:var(--error)}.cell.hint-glow{animation:hintGlow 1s ease 2}.cell.pop-in{animation:popIn .18s ease}.cell.shake{animation:shake .3s ease}
+  .grid.size-7 .cell{font-size:clamp(13px,3.6vw,22px)}
+  .grid.size-7 .cell.clue::after{font-size:8px;top:3px;left:4px}
   .tracker{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:5px;margin:0 0 8px}.track-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 6px;display:flex;justify-content:space-between;gap:5px;align-items:center;font-family:"DM Mono",monospace;font-size:11px}
   .track-item.valid{border-color:var(--success);background:var(--success-light)}.track-item.duplicate{border-color:var(--error);background:var(--error-light);color:var(--error)}.track-item.sequence{border-color:var(--warn);background:var(--warn-light);color:var(--warn)}.track-item.incomplete{opacity:.72}.track-label{font-size:10px;color:var(--text-muted)}.track-value{font-weight:500}
   .target-strip{display:flex;gap:5px;justify-content:center;margin-bottom:7px;flex-wrap:wrap}.target-pill{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 8px;font-size:11px;color:var(--text-muted)}.target-pill strong{font-family:"DM Mono",monospace;color:var(--accent)}
@@ -89,13 +97,13 @@
       <p>Sequential sums and word-length magic</p>
     </div>
     <div class="menu-modes">
-      <article class="mode-card" data-mode="antimagic" tabindex="0">
-        <div class="mode-card-top"><h2>Anti-Magic Squares</h2><span class="mode-badge">Unique Sums</span></div>
-        <p>Place every number once. Every row, column and diagonal must make a different sum - and the sums must run in sequence.</p>
+      <article class="mode-card" data-mode="shikaku" tabindex="0">
+        <div class="mode-card-top"><h2>Shikaku</h2><span class="mode-badge">Rectangles</span></div>
+        <p>Draw rectangles around clues. Each rectangle must contain exactly one clue and match its area.</p>
         <div class="mode-stats">
-          <div class="mode-stat"><div class="mode-stat-label">Best</div><div id="menu-antimagic-best" class="mode-stat-value">-</div></div>
-          <div class="mode-stat"><div class="mode-stat-label">Wins</div><div id="menu-antimagic-wins" class="mode-stat-value">0</div></div>
-          <div class="mode-stat"><div class="mode-stat-label">Stars</div><div id="menu-antimagic-stars" class="mode-stat-value">0</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Best</div><div id="menu-shikaku-best" class="mode-stat-value">-</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Wins</div><div id="menu-shikaku-wins" class="mode-stat-value">0</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Stars</div><div id="menu-shikaku-stars" class="mode-stat-value">0</div></div>
         </div>
       </article>
       <article class="mode-card" data-mode="alphamagic" tabindex="0">
@@ -111,7 +119,7 @@
   </section>
 
   <section id="setup-screen" class="screen">
-    <div class="setup-header"><h2 id="setup-title">Anti-Magic Squares</h2><p id="setup-subtitle">Choose a challenge</p></div>
+    <div class="setup-header"><h2 id="setup-title">Shikaku</h2><p id="setup-subtitle">Choose a challenge</p></div>
     <div class="difficulty-selector">
       <div class="diff-label">Difficulty</div>
       <div class="diff-options">
@@ -134,7 +142,7 @@
       </div>
       <div class="game-score-display"><div id="live-score" class="live-score">0</div><div id="timer" class="timer">00:00</div></div>
     </div>
-    <div id="game-mode-label" class="game-mode-label">Anti-Magic Squares</div>
+    <div id="game-mode-label" class="game-mode-label">Shikaku</div>
     <div class="play-area">
       <div id="grid-container" class="grid-container"></div>
       <div id="target-strip" class="target-strip"></div>
@@ -152,14 +160,12 @@
   <div id="howto-overlay" class="overlay">
     <div class="overlay-card">
       <h2>How to Play</h2>
-      <h3>Anti-Magic Squares</h3>
+      <h3>Shikaku</h3>
       <ul>
-        <li>Fill the empty cells using each missing number exactly once.</li>
-        <li>Add up every row, every column and the two long diagonals. These are the line sums.</li>
-        <li>Unlike a normal magic square, the line sums should not all match.</li>
-        <li>They must make a run of consecutive numbers. On Easy, the ten line sums must be 30, 31, 32, 33, 34, 35, 36, 37, 38 and 39, each used once.</li>
-        <li>No row or column owns a particular target. R1 does not have to be 30, C2 does not have to be 31, and so on. Any line may take any unused target total.</li>
-        <li>The tracker shows each row, column and diagonal sum. Red means two lines have the same sum. Gold means the final list has a gap.</li>
+        <li>Every clue number must sit inside one rectangle or square.</li>
+        <li>The clue tells you the area of its rectangle. A 6 can be 1x6, 2x3, 3x2 or 6x1.</li>
+        <li>Rectangles cannot overlap, and the whole grid must be covered.</li>
+        <li>Select a clue, choose one of its possible rectangle sizes, then tap a valid placement preview.</li>
       </ul>
       <h3>Alphanametics</h3>
       <ul>
@@ -186,6 +192,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=grid-tile-swap-1"></script>
+<script src="game.js?v=shikaku-hard-small-1"></script>
 </body>
 </html>

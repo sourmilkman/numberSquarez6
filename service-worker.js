@@ -1,4 +1,4 @@
-const CACHE_NAME = 'numsquarez6-v1.0.0';
+const CACHE_NAME = 'numsquarez6-v1.0.7';
 const APP_REFRESH = 'anti-magic-help-2026-04-25';
 const ASSETS = [
   './',
