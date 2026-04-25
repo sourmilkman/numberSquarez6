@@ -23,15 +23,15 @@
     hard: [[4,36,13,15,18,21],[27,32,6,23,20,2],[19,12,5,22,25,34],[33,11,35,29,3,1],[26,7,30,10,14,24],[9,8,16,17,28,31]]
   };
   const ALPHA_PUZZLES = [
-    { difficulty:'easy', title:'Thousand Step', solution:[[2745,1667,2437],[1975,2283,2591],[2129,2899,1821]], numberMagicSum:6849, wordLengthMagicSum:105 },
-    { difficulty:'easy', title:'Even Chorus', solution:[[7661,4196,6671],[5186,6176,7166],[5681,8156,4691]], numberMagicSum:18528, wordLengthMagicSum:102 },
-    { difficulty:'easy', title:'Twin Lights', solution:[[7663,4198,6673],[5188,6178,7168],[5683,8158,4693]], numberMagicSum:18534, wordLengthMagicSum:108 },
-    { difficulty:'medium', title:'Green Meridian', solution:[[5913,3589,5249],[4253,4917,5581],[4585,6245,3921]], numberMagicSum:14751, wordLengthMagicSum:105 },
-    { difficulty:'medium', title:'Gold Count', solution:[[7762,4297,6772],[5287,6277,7267],[5782,8257,4792]], numberMagicSum:18831, wordLengthMagicSum:108 },
-    { difficulty:'medium', title:'Ninefold', solution:[[7861,4396,6871],[5386,6376,7366],[5881,8356,4891]], numberMagicSum:19128, wordLengthMagicSum:108 },
-    { difficulty:'hard', title:'Long Names', solution:[[7863,4398,6873],[5388,6378,7368],[5883,8358,4893]], numberMagicSum:19134, wordLengthMagicSum:114 },
-    { difficulty:'hard', title:'Silver Count', solution:[[7963,4498,6973],[5488,6478,7468],[5983,8458,4993]], numberMagicSum:19434, wordLengthMagicSum:111 },
-    { difficulty:'hard', title:'Close Sequence', solution:[[7964,4499,6974],[5489,6479,7469],[5984,8459,4994]], numberMagicSum:19437, wordLengthMagicSum:108 }
+    { difficulty:'easy', title:'Small Run', solution:[[8,25,12],[19,15,11],[18,5,22]], numberMagicSum:45, wordLengthMagicSum:21 },
+    { difficulty:'easy', title:'Pocket Square', solution:[[5,28,12],[22,15,8],[18,2,25]], numberMagicSum:45, wordLengthMagicSum:21 },
+    { difficulty:'easy', title:'Sixty Steps', solution:[[44,67,51],[61,54,47],[57,41,64]], numberMagicSum:162, wordLengthMagicSum:27 },
+    { difficulty:'medium', title:'Hundred Path', solution:[[108,125,112],[119,115,111],[118,105,122]], numberMagicSum:345, wordLengthMagicSum:60 },
+    { difficulty:'medium', title:'Even Hundred', solution:[[105,128,112],[122,115,108],[118,102,125]], numberMagicSum:345, wordLengthMagicSum:60 },
+    { difficulty:'medium', title:'Seventy Arc', solution:[[75,138,102],[132,105,78],[108,72,135]], numberMagicSum:315, wordLengthMagicSum:51 },
+    { difficulty:'hard', title:'High Hundreds', solution:[[144,167,151],[161,154,147],[157,141,164]], numberMagicSum:462, wordLengthMagicSum:66 },
+    { difficulty:'hard', title:'Wide Hundreds', solution:[[134,237,181],[231,184,137],[187,131,234]], numberMagicSum:552, wordLengthMagicSum:69 },
+    { difficulty:'hard', title:'Two Hundred Run', solution:[[205,228,212],[222,215,208],[218,202,225]], numberMagicSum:645, wordLengthMagicSum:60 }
   ];
   const LINES_3 = [[0,0,0,1,0,2,'R1'],[1,0,1,1,1,2,'R2'],[2,0,2,1,2,2,'R3'],[0,0,1,0,2,0,'C1'],[0,1,1,1,2,1,'C2'],[0,2,1,2,2,2,'C3'],[0,0,1,1,2,2,'D1'],[0,2,1,1,2,0,'D2']];
 
@@ -40,11 +40,13 @@
   let gridSize = 5;
   let solution = [], puzzle = [], playerGrid = [];
   let currentAlphaPuzzle = null;
+  let alphaTrayOrder = [];
   let selectedCell = null, selectedTray = null;
   let moveHistory = [];
   let timerStart = 0, timerRAF = 0, moveCount = 0, hintsUsed = 0, checksUsed = 0, gameSerial = 0;
   let dragState = null;
   let suppressTrayClickUntil = 0;
+  let suppressCellClickUntil = 0;
   let audioCtx = null;
   let soundEnabled = localStorage.getItem(KEY_PREFIX + 'sound') !== 'off';
   let darkMode = localStorage.getItem(KEY_PREFIX + 'theme') === 'dark';
@@ -187,6 +189,9 @@
       if (errors.cells.has(`${r},${c}`)) cell.classList.add('error');
       cell.textContent = val || '';
       cell.addEventListener('click', () => selectCell(r, c));
+      cell.addEventListener('pointerdown', ev => {
+        if (!puzzle[r][c] && playerGrid[r][c]) startPointerDrag(ev, playerGrid[r][c], { type: 'grid', r, c });
+      });
       cell.addEventListener('dragover', ev => ev.preventDefault());
       cell.addEventListener('drop', ev => { ev.preventDefault(); const num = parseInt(ev.dataTransfer.getData('text/plain'), 10); if (num) placeNumber(r, c, num); });
       grid.appendChild(cell);
@@ -275,8 +280,14 @@
     const bank = ALPHA_PUZZLES.filter(p => p.difficulty === diff);
     currentAlphaPuzzle = bank[Math.floor(Math.random() * bank.length)];
     solution = cloneGrid(currentAlphaPuzzle.solution);
+    alphaTrayOrder = shuffle(flat(solution));
     gridSize = 3;
     puzzle = Array.from({ length: 3 }, () => Array(3).fill(0));
+    const givenCount = { easy: 3, medium: 2, hard: 0 }[diff];
+    shuffle([...Array(9).keys()]).slice(0, givenCount).forEach(i => {
+      const r = Math.floor(i / 3), c = i % 3;
+      puzzle[r][c] = solution[r][c];
+    });
     playerGrid = cloneGrid(puzzle);
   }
   function renderAlphamagicGrid() {
@@ -288,11 +299,15 @@
       const cell = document.createElement('div');
       cell.className = 'cell';
       cell.dataset.r = r; cell.dataset.c = c;
+      if (puzzle[r][c]) cell.classList.add('given');
       if (playerGrid[r][c]) cell.classList.add('filled');
       if (selectedCell && selectedCell.r === r && selectedCell.c === c) cell.classList.add('selected');
       if (errors.cells.has(`${r},${c}`)) cell.classList.add('error');
       cell.textContent = playerGrid[r][c] || '';
       cell.addEventListener('click', () => selectCell(r, c));
+      cell.addEventListener('pointerdown', ev => {
+        if (!puzzle[r][c] && playerGrid[r][c]) startPointerDrag(ev, playerGrid[r][c], { type: 'grid', r, c });
+      });
       cell.addEventListener('dragover', ev => ev.preventDefault());
       cell.addEventListener('drop', ev => { ev.preventDefault(); const num = parseInt(ev.dataTransfer.getData('text/plain'), 10); if (num) placeNumber(r, c, num); });
       grid.appendChild(cell);
@@ -302,7 +317,7 @@
   function renderAlphamagicTray() {
     const used = new Set(flat(playerGrid).filter(Boolean));
     const tray = $('tray'); tray.innerHTML = '';
-    shuffle(flat(solution)).forEach(num => tray.appendChild(makeTrayButton(num, used.has(num))));
+    alphaTrayOrder.forEach(num => tray.appendChild(makeTrayButton(num, used.has(num))));
   }
   function alphaLineSums(grid, mapper) {
     return LINES_3.map(line => {
@@ -338,17 +353,17 @@
     btn.draggable = false;
     btn.addEventListener('click', () => { if (!used && performance.now() > suppressTrayClickUntil) selectTray(num); });
     btn.addEventListener('pointerdown', ev => {
-      if (!used) startPointerDrag(ev, num);
+      if (!used) startPointerDrag(ev, num, { type: 'tray' });
     });
     return btn;
   }
-  function startPointerDrag(ev, num) {
+  function startPointerDrag(ev, num, source) {
     if (ev.pointerType === 'mouse' && ev.button !== 0) return;
     const ghost = document.createElement('div');
     ghost.className = 'drag-ghost';
     ghost.textContent = num;
     document.body.appendChild(ghost);
-    dragState = { num, ghost, startX: ev.clientX, startY: ev.clientY, active: false, over: null };
+    dragState = { num, source, ghost, startX: ev.clientX, startY: ev.clientY, active: false, over: null };
     movePointerDrag(ev);
     window.addEventListener('pointermove', movePointerDrag);
     window.addEventListener('pointerup', endPointerDrag, { once: true });
@@ -378,10 +393,11 @@
     state.ghost.remove();
     if (!state.active) return;
     suppressTrayClickUntil = performance.now() + 350;
+    suppressCellClickUntil = performance.now() + 350;
     const target = state.over || document.elementFromPoint(ev.clientX, ev.clientY)?.closest?.('.cell');
     if (!target) return;
     const r = parseInt(target.dataset.r, 10), c = parseInt(target.dataset.c, 10);
-    if (Number.isInteger(r) && Number.isInteger(c)) placeNumber(r, c, state.num);
+    if (Number.isInteger(r) && Number.isInteger(c)) dropNumberOnCell(r, c, state.num, state.source);
   }
   function cancelPointerDrag() {
     if (!dragState) return;
@@ -391,6 +407,7 @@
     dragState = null;
   }
   function selectCell(r, c) {
+    if (performance.now() < suppressCellClickUntil) return;
     if (puzzle[r][c]) return;
     selectedCell = { r, c };
     if (selectedTray) placeNumber(r, c, selectedTray);
@@ -404,9 +421,29 @@
     sfx.tap();
   }
   function placeNumber(r, c, num) {
+    dropNumberOnCell(r, c, num, { type: 'tray' });
+  }
+  function dropNumberOnCell(r, c, num, source) {
     if (puzzle[r][c]) return;
     const allowed = gameMode === 'antimagic' ? num >= 1 && num <= gridSize * gridSize : flat(solution).includes(num);
     if (!allowed) return;
+    if (source?.type === 'grid') {
+      if (source.r === r && source.c === c) return;
+      if (puzzle[source.r][source.c]) return;
+      moveHistory.push(cloneGrid(playerGrid));
+      const targetVal = playerGrid[r][c];
+      playerGrid[r][c] = num;
+      playerGrid[source.r][source.c] = targetVal || 0;
+      moveCount++;
+      selectedTray = null;
+      selectedCell = { r, c };
+      renderAll();
+      document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`)?.classList.add('pop-in');
+      document.querySelector(`.cell[data-r="${source.r}"][data-c="${source.c}"]`)?.classList.add('pop-in');
+      sfx.place();
+      if ((gameMode === 'antimagic' && isAntiMagicComplete()) || (gameMode === 'alphamagic' && isAlphamagicComplete())) setTimeout(showWin, 240);
+      return;
+    }
     const old = playerGrid[r][c];
     if (old === num) return;
     moveHistory.push(cloneGrid(playerGrid));
@@ -439,8 +476,14 @@
       tracker.appendChild(item);
     });
     $('target-strip').innerHTML = gameMode === 'alphamagic'
-      ? `<span class="target-pill">${currentAlphaPuzzle.title}</span><span class="target-pill">Number target <strong>${currentAlphaPuzzle.numberMagicSum}</strong></span><span class="target-pill">Word target <strong>${currentAlphaPuzzle.wordLengthMagicSum}</strong></span>`
+      ? `<span class="target-pill">${currentAlphaPuzzle.title}</span><span class="target-pill">Number target <strong>${currentAlphaPuzzle.numberMagicSum}</strong></span><span class="target-pill">Word target <strong>${currentAlphaPuzzle.wordLengthMagicSum}</strong></span>${renderAlphamagicTileInfo()}`
       : renderAntiMagicTargetStrip(antiTargets, sums);
+  }
+  function renderAlphamagicTileInfo() {
+    let n = selectedTray;
+    if (!n && selectedCell) n = playerGrid[selectedCell.r][selectedCell.c];
+    if (!n) return '<div class="tile-info"><strong>-</strong><span>Select a tile</span></div>';
+    return `<div class="tile-info"><strong>${wordLength(n)} letters</strong><span>${numberToWordsBritish(n)}</span></div>`;
   }
   function renderAntiMagicTargetStrip(targets, lineSums) {
     const completeSums = lineSums.filter(line => line.complete).map(line => line.sum);

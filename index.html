@@ -64,6 +64,7 @@
   .tracker{display:grid;grid-template-columns:repeat(auto-fit,minmax(58px,1fr));gap:5px;margin:0 0 8px}.track-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 6px;display:flex;justify-content:space-between;gap:5px;align-items:center;font-family:"DM Mono",monospace;font-size:11px}
   .track-item.valid{border-color:var(--success);background:var(--success-light)}.track-item.duplicate{border-color:var(--error);background:var(--error-light);color:var(--error)}.track-item.sequence{border-color:var(--warn);background:var(--warn-light);color:var(--warn)}.track-item.incomplete{opacity:.72}.track-label{font-size:10px;color:var(--text-muted)}.track-value{font-weight:500}
   .target-strip{display:flex;gap:5px;justify-content:center;margin-bottom:7px;flex-wrap:wrap}.target-pill{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:4px 8px;font-size:11px;color:var(--text-muted)}.target-pill strong{font-family:"DM Mono",monospace;color:var(--accent)}
+  .tile-info{min-width:112px;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);padding:5px 8px;font-size:11px;color:var(--text-muted);text-align:center}.tile-info strong{display:block;font-family:"DM Mono",monospace;font-size:15px;color:var(--accent);line-height:1.1}.tile-info span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .target-note{width:100%;text-align:center;font-size:11px;line-height:1.25;color:var(--text-muted);padding:0 4px}.sum-goals{width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(31px,1fr));gap:4px}.sum-goal{font-family:"DM Mono",monospace;font-size:10px;text-align:center;border:1px solid var(--border);border-radius:999px;background:var(--surface);padding:3px 2px;color:var(--text-muted)}.sum-goal.hit{background:var(--success-light);border-color:var(--success);color:var(--success)}.sum-goal.dup{background:var(--error-light);border-color:var(--error);color:var(--error)}
   .tray{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:8px;box-shadow:var(--shadow-sm);display:grid;grid-template-columns:repeat(auto-fit,minmax(38px,1fr));gap:6px;margin-bottom:8px}
   .tray-num{height:36px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-alt);font-family:"DM Mono",monospace;font-weight:500;cursor:pointer;transition:.14s ease}.tray-num.used{opacity:.28;text-decoration:line-through;cursor:default}.tray-num.selected{background:var(--accent);border-color:var(--accent);color:var(--cell-selected-text)}
@@ -185,6 +186,6 @@
     </div>
   </div>
 </div>
-<script src="game.js?v=compact-ui-2"></script>
+<script src="game.js?v=grid-tile-swap-1"></script>
 </body>
 </html>
