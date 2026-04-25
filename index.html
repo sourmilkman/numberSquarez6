@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Number Squarez 6">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F5F2EB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141414" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Anti-Magic Squares and Alphanametics puzzle games">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon512.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icon192.png">
+<title>Number Squarez 6</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#F5F2EB; --surface:#FFFFFF; --surface-alt:#EDE9E0; --text:#1A1A1A; --text-muted:#817B70;
+    --accent:#2D5A27; --accent-light:#E8F0E6; --border:#D8D3C8; --error:#C4453C; --error-light:#FCEAE8;
+    --warn:#B98218; --warn-light:#FFF4D6; --success:#2D5A27; --success-light:#E8F0E6;
+    --cell-given:#F0EDE5; --cell-empty:#FFFFFF; --cell-filled:#FAFAF7; --cell-selected:#2D5A27;
+    --cell-selected-text:#FFFFFF; --overlay-bg:rgba(245,242,235,.93); --star-active:#D4A017; --star-inactive:#D8D3C8;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.06); --shadow-md:0 4px 12px rgba(0,0,0,.08); --shadow-lg:0 8px 30px rgba(0,0,0,.12);
+    --radius:12px; --radius-sm:8px;
+  }
+  [data-theme="dark"] {
+    --bg:#141414; --surface:#1E1E1E; --surface-alt:#262626; --text:#E8E4DB; --text-muted:#918D84;
+    --accent:#5CB85C; --accent-light:#1E2E1E; --border:#333330; --error:#E06056; --error-light:#2E1A18;
+    --warn:#E8B930; --warn-light:#2A2510; --success:#5CB85C; --success-light:#1E2E1E;
+    --cell-given:#262622; --cell-empty:#1E1E1E; --cell-filled:#222220; --cell-selected:#5CB85C;
+    --cell-selected-text:#141414; --overlay-bg:rgba(20,20,20,.94); --star-active:#E8B930; --star-inactive:#444440;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.2); --shadow-md:0 4px 12px rgba(0,0,0,.3); --shadow-lg:0 8px 30px rgba(0,0,0,.4);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:"DM Sans",sans-serif;touch-action:manipulation}
+  button{font:inherit;color:inherit}
+  #app{width:100%;height:100dvh;max-width:560px;margin:0 auto;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  .theme-toggle{position:absolute;top:min(20px,2.5vh);right:min(24px,4vw);z-index:50;width:40px;height:40px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);box-shadow:var(--shadow-sm);cursor:pointer}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateY(18px);transition:opacity .32s ease,transform .32s ease;padding:0 min(24px,5vw)}
+  .screen.active{opacity:1;pointer-events:auto;transform:translateY(0)}
+  #menu-screen{justify-content:flex-start;gap:min(22px,3vh);padding-top:min(62px,8vh);padding-bottom:22px;overflow-y:auto}
+  .menu-title{text-align:center}.menu-title h1{font-family:"DM Mono",monospace;font-size:clamp(27px,6vw,36px);font-weight:500;margin-bottom:6px}.menu-title p{font-size:13px;color:var(--text-muted)}
+  .menu-modes{display:flex;flex-direction:column;gap:14px}.mode-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow-sm);cursor:pointer;transition:.18s ease}
+  .mode-card:active,.mode-card:focus-visible{transform:scale(.985);border-color:var(--accent);box-shadow:var(--shadow-md);outline:none}
+  .mode-card-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}.mode-card h2{font-family:"DM Mono",monospace;font-size:clamp(17px,3vw,20px);font-weight:500}
+  .mode-badge{font-family:"DM Mono",monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);background:var(--accent-light);border-radius:4px;padding:3px 7px;white-space:nowrap}
+  .mode-card p{font-size:13px;line-height:1.45;color:var(--text-muted)}.mode-stats{display:flex;gap:12px;margin-top:13px;padding-top:12px;border-top:1px solid var(--border)}
+  .mode-stat{flex:1;text-align:center}.mode-stat-label{font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}.mode-stat-value{font-family:"DM Mono",monospace;font-size:15px;margin-top:2px}
+  #setup-screen{justify-content:center;align-items:center;gap:24px}.setup-header{text-align:center}.setup-header h2{font-family:"DM Mono",monospace;font-size:clamp(22px,5vw,29px);font-weight:500;margin-bottom:6px}.setup-header p{font-size:13px;color:var(--text-muted)}
+  .difficulty-selector{width:100%;display:flex;flex-direction:column;gap:9px}.diff-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);font-weight:600}.diff-options{display:flex;gap:10px}
+  .diff-btn{flex:1;border:1.5px solid var(--border);background:var(--surface);border-radius:var(--radius-sm);padding:12px 0;cursor:pointer;font-weight:600}.diff-btn.selected{background:var(--accent);border-color:var(--accent);color:var(--cell-selected-text)}
+  .setup-best{text-align:center;min-height:38px}.setup-best-label{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}.setup-best-value{font-family:"DM Mono",monospace;color:var(--accent);font-size:18px;margin-top:4px}
+  .start-btn{border:0;border-radius:var(--radius);background:var(--text);color:var(--bg);padding:15px 48px;font-weight:700;box-shadow:var(--shadow-md);cursor:pointer}.back-link{border:0;background:transparent;color:var(--text-muted);padding:8px;cursor:pointer}
+  #game-screen{padding-top:min(12px,1.5vh);height:100%;overflow:hidden}.game-topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-shrink:0;padding-bottom:7px}
+  .game-topbar-left,.game-score-display{display:flex;align-items:center;gap:8px}.btn-icon{width:36px;height:36px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .btn-icon:active,.action-btn:active,.tray-num:active{transform:scale(.94)}.live-score{font-family:"DM Mono",monospace;font-size:15px;color:var(--accent);min-width:45px;text-align:right}.timer{font-family:"DM Mono",monospace;font-size:14px;color:var(--text-muted);min-width:44px;text-align:right}
+  .game-mode-label{text-align:center;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-muted);font-weight:600;flex-shrink:0;padding-bottom:5px}
+  .play-area{flex:1;overflow-y:auto;padding-bottom:10px}.grid-container{display:flex;justify-content:center;padding:8px 0 12px}.grid{display:grid;gap:2px;background:var(--border);border:2px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-md);width:min(92vw,500px);max-width:100%}
+  .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:var(--cell-empty);font-family:"DM Mono",monospace;font-weight:500;font-size:clamp(18px,7vw,34px);cursor:pointer;user-select:none;position:relative;transition:.14s ease}
+  .grid.size-5 .cell{font-size:clamp(16px,6vw,30px)}.grid.size-6 .cell{font-size:clamp(14px,5vw,25px)}.cell.given{background:var(--cell-given);cursor:default}.cell.filled{background:var(--cell-filled)}.cell.selected{background:var(--cell-selected);color:var(--cell-selected-text);box-shadow:inset 0 0 0 3px rgba(255,255,255,.18)}.cell.error{background:var(--error-light);color:var(--error)}.cell.hint-glow{animation:hintGlow 1s ease 2}.cell.pop-in{animation:popIn .18s ease}.cell.shake{animation:shake .3s ease}
+  .tracker{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:7px;margin:0 0 12px}.track-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px 8px;display:flex;justify-content:space-between;gap:6px;align-items:center;font-family:"DM Mono",monospace;font-size:12px}
+  .track-item.valid{border-color:var(--success);background:var(--success-light)}.track-item.duplicate{border-color:var(--error);background:var(--error-light);color:var(--error)}.track-item.sequence{border-color:var(--warn);background:var(--warn-light);color:var(--warn)}.track-item.incomplete{opacity:.72}.track-label{font-size:11px;color:var(--text-muted)}.track-value{font-weight:500}
+  .target-strip{display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap}.target-pill{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--text-muted)}.target-pill strong{font-family:"DM Mono",monospace;color:var(--accent)}
+  .tray{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow-sm);display:grid;grid-template-columns:repeat(auto-fit,minmax(43px,1fr));gap:8px;margin-bottom:10px}
+  .tray-num{height:42px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface-alt);font-family:"DM Mono",monospace;font-weight:500;cursor:pointer;transition:.14s ease}.tray-num.used{opacity:.28;text-decoration:line-through;cursor:default}.tray-num.selected{background:var(--accent);border-color:var(--accent);color:var(--cell-selected-text)}
+  .drag-ghost{position:fixed;z-index:250;width:48px;height:48px;border-radius:var(--radius-sm);background:var(--accent);color:var(--cell-selected-text);display:flex;align-items:center;justify-content:center;font-family:"DM Mono",monospace;font-weight:500;box-shadow:var(--shadow-lg);pointer-events:none;transform:translate(-50%,-50%) scale(1.04)}
+  .cell.drag-over{box-shadow:inset 0 0 0 4px var(--warn);background:var(--warn-light)}
+  .actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;flex-shrink:0;padding-bottom:12px}.action-btn{border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);padding:10px 2px;font-weight:700;font-size:13px;cursor:pointer}.action-btn.primary{background:var(--accent);border-color:var(--accent);color:var(--cell-selected-text)}
+  .overlay{position:absolute;inset:0;background:var(--overlay-bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .22s ease;backdrop-filter:blur(8px)}.overlay.active{opacity:1;pointer-events:auto}
+  .overlay-card{width:100%;max-width:500px;max-height:86dvh;overflow-y:auto;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-lg);padding:22px}.overlay-card h2{font-family:"DM Mono",monospace;font-weight:500;margin-bottom:12px}.overlay-card h3{font-size:14px;margin:16px 0 7px;color:var(--accent)}.overlay-card p,.overlay-card li{font-size:14px;line-height:1.55;color:var(--text-muted)}.overlay-card ul{padding-left:18px}.close-btn{margin-top:18px;width:100%;border:0;border-radius:var(--radius-sm);background:var(--text);color:var(--bg);padding:13px;font-weight:700;cursor:pointer}
+  .win-stars{font-size:30px;letter-spacing:4px;color:var(--star-active);margin:8px 0}.win-score{font-family:"DM Mono",monospace;font-size:34px;color:var(--accent);margin:8px 0}.score-breakdown{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.score-line{background:var(--surface-alt);border-radius:var(--radius-sm);padding:8px;font-size:12px;color:var(--text-muted)}.score-line strong{display:block;font-family:"DM Mono",monospace;color:var(--text);font-size:15px}
+  @keyframes popIn{0%{transform:scale(.75);opacity:.45}100%{transform:scale(1);opacity:1}}@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}@keyframes hintGlow{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 5px var(--warn-light),0 0 22px var(--warn)}}@keyframes ripple{0%{transform:scale(.8);opacity:.8}100%{transform:scale(2.1);opacity:0}}
+  .win-ripple{position:absolute;width:120px;height:120px;border:2px solid var(--accent);border-radius:50%;animation:ripple .8s ease-out forwards;pointer-events:none}
+  @media (min-width:700px){#app{max-width:680px}.play-area{padding-inline:24px}.grid{width:min(62vh,520px)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">Sun</button>
+
+  <section id="menu-screen" class="screen active">
+    <div class="menu-title">
+      <h1>Number Squarez 6</h1>
+      <p>Sequential sums and word-length magic</p>
+    </div>
+    <div class="menu-modes">
+      <article class="mode-card" data-mode="antimagic" tabindex="0">
+        <div class="mode-card-top"><h2>Anti-Magic Squares</h2><span class="mode-badge">Unique Sums</span></div>
+        <p>Place every number once. Every row, column and diagonal must make a different sum - and the sums must run in sequence.</p>
+        <div class="mode-stats">
+          <div class="mode-stat"><div class="mode-stat-label">Best</div><div id="menu-antimagic-best" class="mode-stat-value">-</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Wins</div><div id="menu-antimagic-wins" class="mode-stat-value">0</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Stars</div><div id="menu-antimagic-stars" class="mode-stat-value">0</div></div>
+        </div>
+      </article>
+      <article class="mode-card" data-mode="alphamagic" tabindex="0">
+        <div class="mode-card-top"><h2>Alphanametics</h2><span class="mode-badge">Word-Magic</span></div>
+        <p>Build a magic square twice: once with the numbers, once with the letter counts of their English names.</p>
+        <div class="mode-stats">
+          <div class="mode-stat"><div class="mode-stat-label">Best</div><div id="menu-alphamagic-best" class="mode-stat-value">-</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Wins</div><div id="menu-alphamagic-wins" class="mode-stat-value">0</div></div>
+          <div class="mode-stat"><div class="mode-stat-label">Stars</div><div id="menu-alphamagic-stars" class="mode-stat-value">0</div></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section id="setup-screen" class="screen">
+    <div class="setup-header"><h2 id="setup-title">Anti-Magic Squares</h2><p id="setup-subtitle">Choose a challenge</p></div>
+    <div class="difficulty-selector">
+      <div class="diff-label">Difficulty</div>
+      <div class="diff-options">
+        <button class="diff-btn" data-diff="easy">Easy</button>
+        <button class="diff-btn selected" data-diff="medium">Medium</button>
+        <button class="diff-btn" data-diff="hard">Hard</button>
+      </div>
+    </div>
+    <div id="setup-best" class="setup-best"></div>
+    <button id="start-btn" class="start-btn">Start</button>
+    <button id="setup-back" class="back-link">Back to menu</button>
+  </section>
+
+  <section id="game-screen" class="screen">
+    <div class="game-topbar">
+      <div class="game-topbar-left">
+        <button id="back-btn" class="btn-icon" aria-label="Back">‹</button>
+        <button id="howto-btn" class="btn-icon" aria-label="How to play">?</button>
+        <button id="mute-toggle" class="btn-icon" aria-label="Mute">Sound</button>
+      </div>
+      <div class="game-score-display"><div id="live-score" class="live-score">0</div><div id="timer" class="timer">00:00</div></div>
+    </div>
+    <div id="game-mode-label" class="game-mode-label">Anti-Magic Squares</div>
+    <div class="play-area">
+      <div id="grid-container" class="grid-container"></div>
+      <div id="target-strip" class="target-strip"></div>
+      <div id="tracker" class="tracker"></div>
+      <div id="tray" class="tray"></div>
+    </div>
+    <div class="actions">
+      <button id="hint-btn" class="action-btn">Hint</button>
+      <button id="check-btn" class="action-btn primary">Check</button>
+      <button id="undo-btn" class="action-btn">Undo</button>
+      <button id="clear-btn" class="action-btn">Clear</button>
+    </div>
+  </section>
+
+  <div id="howto-overlay" class="overlay">
+    <div class="overlay-card">
+      <h2>How to Play</h2>
+      <h3>Anti-Magic Squares</h3>
+      <ul>
+        <li>Use every number from 1 to N squared exactly once.</li>
+        <li>Rows, columns and both main diagonals each produce a line sum.</li>
+        <li>All line sums must be unique, and sorted sums must rise by exactly 1.</li>
+        <li>The tracker flags duplicate sums in red and broken sequence sums in gold.</li>
+      </ul>
+      <h3>Alphanametics</h3>
+      <ul>
+        <li>Place the nine given numbers into a 3 by 3 grid.</li>
+        <li>The numbers must form a normal magic square.</li>
+        <li>The letter counts of their British-English names must also form a magic square.</li>
+        <li>Spaces and hyphens are ignored. British "and" is counted.</li>
+      </ul>
+      <h3>Controls</h3>
+      <p>Tap a cell and then a number, or drag a number from the tray. Use Hint, Check, Undo and Clear from the bottom bar.</p>
+      <button id="close-howto" class="close-btn">Close</button>
+    </div>
+  </div>
+
+  <div id="win-overlay" class="overlay">
+    <div class="overlay-card" style="text-align:center;position:relative;overflow:hidden">
+      <h2>Square Solved</h2>
+      <div id="win-stars" class="win-stars">***</div>
+      <div id="win-score" class="win-score">0</div>
+      <p id="win-message">New best!</p>
+      <div id="score-breakdown" class="score-breakdown"></div>
+      <button id="play-again" class="close-btn">Play Again</button>
+      <button id="win-menu" class="back-link" style="margin-top:8px">Main menu</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
