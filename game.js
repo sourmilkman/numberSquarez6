@@ -58,10 +58,14 @@
 
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : '');
-    $('theme-toggle').textContent = darkMode ? 'Moon' : 'Sun';
+    $('theme-toggle').textContent = darkMode ? 'D' : 'L';
+    $('theme-toggle').setAttribute('aria-label', darkMode ? 'Switch to light mode' : 'Switch to dark mode');
     localStorage.setItem(KEY_PREFIX + 'theme', darkMode ? 'dark' : 'light');
   }
-  function updateMuteBtn() { $('mute-toggle').textContent = soundEnabled ? 'Sound' : 'Mute'; }
+  function updateMuteBtn() {
+    $('mute-toggle').textContent = soundEnabled ? 'S' : 'M';
+    $('mute-toggle').setAttribute('aria-label', soundEnabled ? 'Mute sound' : 'Unmute sound');
+  }
   function ensureAudio() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -207,6 +211,13 @@
       const values = line.cells.map(([r, c]) => playerGrid[r][c]);
       return { ...line, complete: values.every(Boolean), sum: values.every(Boolean) ? values.reduce((a, b) => a + b, 0) : values.reduce((a, b) => a + (b || 0), 0) };
     });
+  }
+  function getAntiMagicTargetSums() {
+    const current = playerGrid;
+    playerGrid = solution;
+    const sums = getAntiMagicLineSums().map(line => line.sum).sort((a, b) => a - b);
+    playerGrid = current;
+    return sums;
   }
   function getAntiMagicErrors() {
     const cells = new Set(), lineStates = {};
@@ -414,17 +425,37 @@
     tracker.innerHTML = '';
     const errors = gameMode === 'antimagic' ? getAntiMagicErrors() : getAlphamagicErrors();
     const sums = gameMode === 'antimagic' ? getAntiMagicLineSums() : alphaLineSums(playerGrid, n => n);
+    const antiTargets = gameMode === 'antimagic' ? getAntiMagicTargetSums() : [];
     sums.forEach((line, i) => {
       const item = document.createElement('div');
       const state = !line.complete ? 'incomplete' : errors.lineStates[line.key] || 'valid';
       item.className = `track-item ${state}`;
       const extra = gameMode === 'alphamagic' ? ` / ${alphaLineSums(playerGrid, wordLength)[i].sum}` : '';
-      item.innerHTML = `<span class="track-label">${line.key}</span><span class="track-value">${line.sum}${extra}</span>`;
+      const value = gameMode === 'antimagic' && !line.complete ? `${line.sum}+` : `${line.sum}${extra}`;
+      item.title = gameMode === 'antimagic'
+        ? `${line.key}: ${line.complete ? 'finished line sum' : 'partial sum so far'}`
+        : `${line.key}: number sum / word-length sum`;
+      item.innerHTML = `<span class="track-label">${line.key}</span><span class="track-value">${value}</span>`;
       tracker.appendChild(item);
     });
     $('target-strip').innerHTML = gameMode === 'alphamagic'
       ? `<span class="target-pill">${currentAlphaPuzzle.title}</span><span class="target-pill">Number target <strong>${currentAlphaPuzzle.numberMagicSum}</strong></span><span class="target-pill">Word target <strong>${currentAlphaPuzzle.wordLengthMagicSum}</strong></span>`
-      : '<span class="target-pill">Line sums must be unique and consecutive</span>';
+      : renderAntiMagicTargetStrip(antiTargets, sums);
+  }
+  function renderAntiMagicTargetStrip(targets, lineSums) {
+    const completeSums = lineSums.filter(line => line.complete).map(line => line.sum);
+    const counts = completeSums.reduce((bag, sum) => {
+      bag[sum] = (bag[sum] || 0) + 1;
+      return bag;
+    }, {});
+    const goals = targets.map(sum => {
+      const state = counts[sum] > 1 ? 'dup' : counts[sum] === 1 ? 'hit' : '';
+      return `<span class="sum-goal ${state}">${sum}</span>`;
+    }).join('');
+    return `<span class="target-pill">Use every number <strong>1-${gridSize * gridSize}</strong> once</span>
+      <span class="target-pill">${targets.length} line sums must be <strong>${targets[0]}-${targets[targets.length - 1]}</strong></span>
+      <div class="target-note">Rows, columns and diagonals do not have assigned totals. Any line can claim any unused target sum.</div>
+      <div class="sum-goals" aria-label="Anti-magic target sums">${goals}</div>`;
   }
   function renderAll() {
     if (gameMode === 'antimagic') { renderAntiMagicGrid(); renderAntiMagicTray(); }

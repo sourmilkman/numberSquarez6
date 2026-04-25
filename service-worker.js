@@ -1,4 +1,5 @@
 const CACHE_NAME = 'numsquarez6-v1.0.0';
+const APP_REFRESH = 'anti-magic-help-2026-04-25';
 const ASSETS = [
   './',
   './index.html',
